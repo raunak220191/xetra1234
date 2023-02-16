@@ -1,0 +1,14 @@
+Spacy provides an easy-to-use pipeline architecture that can be used to develop an auto-annotator. Here are the general steps to create an auto-annotator using Spacy in Python:
+
+Install Spacy using pip install spacy.
+
+Load a pre-trained Spacy model or create your own by following the Spacy documentation.
+
+Define the annotation function that takes in the text and returns a list of tuples representing the start and end positions of each entity and the entity type. You can use regular expressions, keyword matching, or any other method to extract the entities.
+
+Add the annotation function as a component to the Spacy pipeline using nlp.add_pipe().
+
+Call the Spacy nlp object on your input text to process it through the pipeline, which will add the annotations to the Doc object.
+
+Access the annotations in the Doc object using the ents attribute, which returns a list of Span objects.
+
