@@ -1,0 +1,111 @@
+In your Angular service, use Angular's HttpClient to call the API endpoint and retrieve the list of matching PDF files.
+@Injectable({
+  providedIn: 'root'
+})
+export class PdfSearchService {
+  constructor(private http: HttpClient) {}
+
+  search(query: string): Observable<string[]> {
+    return this.http.get<string[]>('/api/search', { params: { query } });
+  }
+}
+
+In your Angular component, call the search service's search method and display the results.
+@Component({
+  selector: 'app-pdf-search',
+  template: `
+    <input type="text" [(ngModel)]="query" (keydown.enter)="search()" placeholder="Search...">
+    <div *ngIf="searchResults.length > 0">
+      <h3>Search results:</h3>
+      <ul>
+        <li *ngFor="let result of searchResults" (click)="showPdf(result)">
+          {{ result }}
+        </li>
+      </ul>
+    </div>
+    <div *ngIf="pdfUrl">
+      <h3>{{ pdfUrl }}</h3>
+      <app-pdf-viewer [pdfUrl]="pdfUrl" [highlight]="query"></app-pdf-viewer>
+    </div>
+  `
+})
+export class PdfSearchComponent {
+  query = '';
+  searchResults: string[] = [];
+  pdfUrl: string;
+
+  constructor(private pdfSearchService: PdfSearchService) {}
+
+  search() {
+    this.pdfSearchService.search(this.query).subscribe(results => {
+      this.searchResults = results;
+      this.pdfUrl = null;
+    });
+  }
+
+  showPdf(pdfUrl: string) {
+    this.pdfUrl = pdfUrl;
+  }
+}
+
+
+Create a PDF viewer component to display the PDF and highlight search results:
+@Component({
+  selector: 'app-pdf-viewer',
+  template: `
+    <div #pdfContainer></div>
+  `
+})
+export class PdfViewerComponent implements OnInit, OnDestroy {
+  @Input() pdfUrl: string;
+  @Input() highlight: string;
+
+  private pdfDoc: any;
+  private textLayer: any;
+
+  constructor(private elementRef: ElementRef) {}
+
+  ngOnInit() {
+    pdfjsLib.getDocument(this.pdfUrl).promise.then(pdfDoc => {
+      this.pdfDoc = pdfDoc;
+      this.render();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.textLayer) {
+      this.textLayer.destroy();
+    }
+    if (this.pdfDoc) {
+      this.pdfDoc.destroy();
+    }
+  }
+
+  private async render() {
+    const canvasWrapper = this.elementRef.nativeElement.querySelector('#pdfContainer');
+    const canvas = document.createElement('canvas');
+    canvasWrapper.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    const page = await this.pdfDoc.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    const textLayerDiv = document.createElement('div');
+    textLayerDiv.className = 'textLayer';
+    canvasWrapper.appendChild(textLayerDiv);
+
+    this.textLayer = await page.getTextLayer({
+      container: textLayerDiv,
+      viewport,
+      enhanceTextSelection: true
+    });
+    this.textLayer.setTextContent(await page.getTextContent());
+
+    if (this.highlight) {
+      this.highlightSearchResults();
+    }
+  }
+
+  private highlightSearchResults() {
+    const textDivs
