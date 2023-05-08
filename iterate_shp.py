@@ -1,71 +1,41 @@
 import requests
-from requests.auth import HTTPBasicAuth
 import json
 
-# set the SharePoint site url and credentials
-site_url = "https://your_sharepoint_site_url"
-username = "your_username"
-password = "your_password"
+# Set the SharePoint site URL
+site_url = "https://yourdomain.sharepoint.com/sites/YourSiteName"
 
-# function to get the contents of a folder
-def get_folder_contents(folder_url):
-    # set the REST API endpoint for getting the contents of a folder
-    endpoint_url = site_url + "/_api/web/GetFolderByServerRelativeUrl('" + folder_url + "')?$expand=Folders,Files"
-    
-    # make a GET request to the endpoint to get the folder contents
-    response = requests.get(endpoint_url, auth=HTTPBasicAuth(username, password))
-    
-    # parse the response as JSON
-    data = json.loads(response.text)
-    
-    # get the subfolders and files of the folder
-    subfolders = data['d']['Folders']['results']
-    files = data['d']['Files']['results']
-    
-    # print the subfolders and files
-    print("Subfolders:")
-    for folder in subfolders:
-        print(" - " + folder['Name'])
-    print("Files:")
-    for file in files:
-        print(" - " + file['Name'])
+# Set the client ID and client secret
+client_id = "your_client_id_here"
+client_secret = "your_client_secret_here"
 
-# function to recursively list down all directories and files
-def list_folders_and_files(folder_url):
-    # set the REST API endpoint for getting the contents of a folder
-    endpoint_url = site_url + "/_api/web/GetFolderByServerRelativeUrl('" + folder_url + "')?$expand=Folders,Files"
-    
-    # make a GET request to the endpoint to get the folder contents
-    response = requests.get(endpoint_url, auth=HTTPBasicAuth(username, password))
-    
-    # parse the response as JSON
-    data = json.loads(response.text)
-    
-    # get the subfolders and files of the folder
-    subfolders = data['d']['Folders']['results']
-    files = data['d']['Files']['results']
-    
-    # print the folder name and its contents
-    print("Folder: " + data['d']['Name'])
-    print("Subfolders:")
-    for folder in subfolders:
-        print(" - " + folder['Name'])
-    print("Files:")
-    for file in files:
-        print(" - " + file['Name'])
-    
-    # ask the user to select a subfolder to view its contents
-    while True:
-        selection = input("Enter a subfolder name to view its contents (or type 'exit' to quit): ")
-        if selection == "exit":
-            return
-        for folder in subfolders:
-            if folder['Name'] == selection:
-                # if the user selected a subfolder, recursively list down its contents
-                list_folders_and_files(folder['ServerRelativeUrl'])
-                break
-        else:
-            print("Invalid selection. Please try again.")
+# Construct the authorization header
+auth_url = "https://accounts.accesscontrol.windows.net/yourdomain.onmicrosoft.com/tokens/OAuth/2"
+auth_data = {
+    "grant_type": "client_credentials",
+    "client_id": client_id,
+    "client_secret": client_secret,
+    "resource": "00000003-0000-0ff1-ce00-000000000000/yourdomain.sharepoint.com@yourdomain.onmicrosoft.com"
+}
+auth_response = requests.post(auth_url, data=auth_data)
+auth_response.raise_for_status()
+access_token = auth_response.json()["access_token"]
+headers = {
+    "Authorization": "Bearer " + access_token,
+    "Accept": "application/json;odata=verbose"
+}
 
-# call the list_folders_and_files function to start listing down the folders and files
-list_folders_and_files("/")
+# Make the API request to get the list of directories
+api_url = site_url + "/_api/web/Lists/getByTitle('Documents')/RootFolder?$expand=Folders,Folders/Folders"
+api_response = requests.get(api_url, headers=headers)
+api_response.raise_for_status()
+
+# Parse the API response and print the list of directories
+api_data = api_response.json()
+folders = api_data["Folders"]
+print("List of Directories:")
+for folder in folders:
+    print(folder["Name"])
+    subfolders = folder["Folders"]
+    for subfolder in subfolders:
+        print("  " + subfolder["Name"])
+
