@@ -1,7 +1,7 @@
 import requests
 
 # SharePoint site URL
-site_url = 'https://your-sharepoint-site-url.com/'
+site_url = 'https://your-sharepoint-site-url.com'
 
 # SharePoint site relative URL of the .doc file
 doc_file_url = '/sites/your-site/your-library/your-file.doc'
@@ -18,14 +18,8 @@ client_id = 'your-client-id'
 # SharePoint app client secret
 client_secret = 'your-client-secret'
 
-# SharePoint tenant ID
-tenant_id = 'your-tenant-id'
-
-# SharePoint site realm
-realm = requests.get(site_url).headers['WWW-Authenticate'].split('=')[1]
-
 # Get access token
-auth_url = 'https://accounts.accesscontrol.windows.net/{}/tokens/OAuth/2'.format(realm)
+auth_url = 'https://accounts.accesscontrol.windows.net/{tenant_id}/tokens/OAuth/2'
 auth_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 auth_data = {
     'grant_type': 'client_credentials',
@@ -33,7 +27,7 @@ auth_data = {
     'client_secret': client_secret,
     'resource': site_url,
 }
-auth_response = requests.post(auth_url, headers=auth_headers, data=auth_data).json()
+auth_response = requests.post(auth_url.format(tenant_id='common'), headers=auth_headers, data=auth_data).json()
 access_token = auth_response['access_token']
 
 # Convert the .doc file to .pdf using SharePoint REST API
