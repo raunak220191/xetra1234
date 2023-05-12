@@ -1,67 +1,70 @@
 from docx import Document
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import RGBColor
 
-# Open the .docx file
-doc = Document('example.docx')
+def docx_to_html(doc_file):
+    doc = Document(doc_file)
+    html = []
 
-# Define the HTML template
-html_template = '''
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{title}</title>
-        <style>
-            {style}
-        </style>
-    </head>
-    <body>
-        {body}
-    </body>
-</html>
-'''
+    for para in doc.paragraphs:
+        text = para.text
+        if text:
+            runs = para.runs
+            if runs:
+                run_html = []
+                for run in runs:
+                    run_text = run.text
+                    if run_text:
+                        run_html.append(run_text)
+                    font = run.font
+                    if font:
+                        style = ""
+                        if font.bold:
+                            style += "font-weight:bold;"
+                        if font.italic:
+                            style += "font-style:italic;"
+                        if font.underline:
+                            style += "text-decoration:underline;"
+                        color = font.color.rgb
+                        if color:
+                            r, g, b = color
+                            style += f"color:rgb({r}, {g}, {b});"
+                        size = font.size.pt
+                        if size:
+                            style += f"font-size:{size}pt;"
+                        if style:
+                            run_html[-1] = f"<span style='{style}'>{run_text}</span>"
+                text = "".join(run_html)
+            align = para.alignment
+            if align != WD_PARAGRAPH_ALIGNMENT.LEFT:
+                html.append(f"<p align='{align._member_name.lower()}'>{text}</p>")
+            else:
+                html.append(f"<p>{text}</p>")
 
-# Define the CSS styles to use in the HTML
-styles = ''
-for paragraph_format in doc.styles:
-    if paragraph_format.base_style is not None:
-        continue
-    style = f'''
-        .{paragraph_format.name} {{
-            font-size: {paragraph_format.font.size/2}pt;
-            font-family: {paragraph_format.font.name};
-            color: {RGBColor(paragraph_format.font.color.rgb).hex};
-            { 'font-weight: bold;' if paragraph_format.font.bold else '' }
-            { 'font-style: italic;' if paragraph_format.font.italic else '' }
-            { 'text-decoration: underline;' if paragraph_format.font.underline else '' }
-        }}
-    '''
-    styles += style
+    for table in doc.tables:
+        rows = table.rows
+        cols = table.columns
+        html.append("<table>")
+        for row in rows:
+            html.append("<tr>")
+            for cell in row.cells:
+                cell_html = []
+                cell_text = cell.text
+                if cell_text:
+                    cell_html.append(cell_text)
+                shading_color = cell.shading.background_color.rgb
+                if shading_color:
+                    r, g, b = shading_color
+                    cell_html.insert(0, f"<div style='background-color:rgb({r}, {g}, {b});'>")
+                    cell_html.append("</div>")
+                cell_text = "".join(cell_html)
+                cell_width = cell.width
+                if cell_width:
+                    html.append(f"<td width='{cell_width}'>{cell_text}</td>")
+                else:
+                    html.append(f"<td>{cell_text}</td>")
+            html.append("</tr>")
+        html.append("</table>")
 
-# Define the HTML body
-body = ''
-for paragraph in doc.paragraphs:
-    body += f'<p class="{paragraph.style.name}">{paragraph.text}</p>'
-    for run in paragraph.runs:
-        if run.bold:
-            body = body.replace(run.text, f'<strong>{run.text}</strong>')
-        if run.italic:
-            body = body.replace(run.text, f'<em>{run.text}</em>')
-        if run.underline:
-            body = body.replace(run.text, f'<u>{run.text}</u>')
-    if paragraph._element.getchildren():
-        tbl = paragraph._element.xpath('.//w:tbl')[0]
-        body += f'<table>'
-        for row in tbl.xpath('.//w:tr'):
-            body += '<tr>'
-            for cell in row.xpath('.//w:tc'):
-                body += f'<td>{cell.xpath(".//w:t")[0].text}</td>'
-            body += '</tr>'
-        body += '</table>'
-
-# Combine the HTML template, CSS styles, and HTML body to create the final HTML
-html = html_template.format(title='Example Document', style=styles, body=body)
-
-# Write the HTML to a file
-with open('example.html', 'w') as f:
-    f.write(html)
+    return "".join(html)
