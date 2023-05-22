@@ -1,0 +1,19 @@
+import os
+import streamlit as st
+from PIL import Image
+import torch
+from transformers import LayoutLMForSequenceClassification, LayoutLMTokenizer
+
+# Set the paths for the local model and tokenizer files
+model_path = "./pytorch_model.bin"
+tokenizer_path = "./tokenizer.json"
+
+# Check if the local files exist
+if not os.path.exists(model_path) or not os.path.exists(tokenizer_path):
+    raise FileNotFoundError("Model and tokenizer files not found. Please make sure you have downloaded them and placed them in the correct directory.")
+
+# Load the pre-trained model and tokenizer
+model = LayoutLMForSequenceClassification.from_pretrained("./", pretrained_model_name_or_path=model_path)
+tokenizer = LayoutLMTokenizer.from_pretrained("./", pretrained_model_name_or_path=tokenizer_path)
+
+# Rest of the code remains the same...
