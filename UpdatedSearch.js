@@ -22,7 +22,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import HomeIcon from "@mui/icons-material/Home";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import MenuItem from '@mui/material/MenuItem';
+import MenuItem from "@mui/material/MenuItem";
 
 const Vault = () => {
   const navigate = useNavigate();
@@ -72,7 +72,13 @@ const Vault = () => {
   const searchService = (query, startWord, endWord) => {
     setLoading(true);
     const url = "http://localhost:9099/vault_service";
-    const data = { query: query, startWord: startWord, endWord: endWord };
+    const data = {
+      query: query,
+      startWord: startWord,
+      endWord: endWord,
+      isContextual: contextualSearch,
+      contextualType: searchType,
+    };
 
     axios
       .post(url, data)
@@ -83,11 +89,7 @@ const Vault = () => {
             name: item.filename,
             id: item.file_id,
             link: (
-              <a
-                href={item.link}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={item.link} target="_blank" rel="noopener noreferrer">
                 {item.link}
               </a>
             ),
