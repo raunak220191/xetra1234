@@ -38,6 +38,7 @@ const Vault = () => {
   const [searchString, setSearchString] = useState("");
   const [startWord, setStartWord] = useState("");
   const [endWord, setEndWord] = useState("");
+  const [columnNames, setColumnNames] = useState([]);
 
   useEffect(() => {
     searchService("");
@@ -86,8 +87,7 @@ const Vault = () => {
         const results = response.data;
         const transformedData = results.map((item) => {
           return {
-            name: item.filename,
-            id: item.file_id,
+            ...item,
             link: (
               <a href={item.link} target="_blank" rel="noopener noreferrer">
                 {item.link}
@@ -104,6 +104,10 @@ const Vault = () => {
           };
         });
         setRowData(transformedData);
+
+        const keys = Object.keys(results[0]);
+        setColumnNames(keys);
+
         setLoading(false);
       })
       .catch((error) => {
@@ -281,8 +285,9 @@ const Vault = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Link</TableCell>
+                {columnNames.map((columnName) => (
+                  <TableCell key={columnName}>{columnName}</TableCell>
+                ))}
                 <TableCell>View</TableCell>
               </TableRow>
             </TableHead>
@@ -294,16 +299,17 @@ const Vault = () => {
                   )
                 : rowData
               ).map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.link}</TableCell>
+                <TableRow key={row.file_id}>
+                  {columnNames.map((columnName) => (
+                    <TableCell key={columnName}>{row[columnName]}</TableCell>
+                  ))}
                   <TableCell>{row.viewButton}</TableCell>
                 </TableRow>
               ))}
 
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={3} />
+                  <TableCell colSpan={columnNames.length + 1} />
                 </TableRow>
               )}
             </TableBody>
