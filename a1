@@ -1,9 +1,1 @@
-4. Otherwise, find the conditional language that refers to the Barrier Level:
-- If it states delivery occurs **below** (or **below or equal to**) its Barrier Level, return:
-  ```
-  IN
-  ```
-- If it states delivery occurs **greater than** (or **at or above**) its Barrier Level, return:
-  ```
-  Out
-  ```
+aq1
