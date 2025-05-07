@@ -1,33 +1,16 @@
 import re
-import tempfile
+from typing import List
 
-from docx import Document
-import pdfplumber
+from langchain.document_loaders import UnstructuredWordDocumentLoader, UnstructuredPDFLoader
+from langchain.schema import Document
 
-# Heuristic regex for “formula‐like” content:
+# A simple heuristic for formula‐like lines
 FORMULA_PATTERN = re.compile(
-    r"([∑∫√∆≈≠≤≥×÷]|\\frac|[A-Za-z0-9]+\s*[/^_]\s*[A-Za-z0-9]+)"
+    r"(\\frac\{.+?\}\{.+?\}|∑|√|÷|×|/|\^[0-9]+|_[0-9]+)"
 )
 
-def convert_doc_to_text(file_bytes: bytes, suffix: str) -> str:
-    """
-    Read through a .docx or .pdf (bytes), detect formula lines,
-    and return one big text with "Formula: ..." injected inline.
-    """
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(file_bytes)
-        tmp.flush()
-        path = tmp.name
-
-    if suffix.lower() == ".docx":
-        return _process_docx(path)
-    elif suffix.lower() == ".pdf":
-        return _process_pdf(path)
-    else:
-        raise ValueError("Unsupported suffix")
-
 def _explain_formula(expr: str) -> str:
-    """Very basic symbol→word replacements."""
+    """Turn a little bit of LaTeX or symbol soup into plain English."""
     t = expr
     t = re.sub(r"\\frac\{(.+?)\}\{(.+?)\}", r"(\1) divided by (\2)", t)
     t = t.replace("/", " divided by ")
@@ -37,34 +20,44 @@ def _explain_formula(expr: str) -> str:
     t = t.replace("√", "square root ")
     t = t.replace("×", " times ")
     t = t.replace("÷", " divided by ")
-    # Strip leftover braces/slashes
-    t = re.sub(r"[{}\\]", "", t)
+    # strip remaining backslashes/braces
+    t = re.sub(r"[\\\{\}]", "", t)
     return t.strip()
 
-def _process_docx(path: str) -> str:
-    parts = []
-    doc = Document(path)
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
-            continue
-        if FORMULA_PATTERN.search(text):
-            parts.append(f"Formula: {_explain_formula(text)}")
-        else:
-            parts.append(text)
-    return "\n\n".join(parts)
+def load_and_annotate(path: str) -> List[Document]:
+    """
+    Load a DOCX or PDF via LangChain's Unstructured loaders (fast strategy),
+    detect formula‐like lines, and inject "Formula: ..." explanations inline.
+    Returns a list of Documents.
+    """
+    path_lower = path.lower()
+    if path_lower.endswith(".docx"):
+        loader = UnstructuredWordDocumentLoader(
+            path,
+            unstructured_kwargs={"strategy": "fast"}
+        )
+    elif path_lower.endswith(".pdf"):
+        loader = UnstructuredPDFLoader(
+            path,
+            unstructured_kwargs={"strategy": "fast"}
+        )
+    else:
+        raise ValueError("Only .docx and .pdf supported")
 
-def _process_pdf(path: str) -> str:
-    parts = []
-    with pdfplumber.open(path) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text() or ""
-            for line in text.splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                if FORMULA_PATTERN.search(line):
-                    parts.append(f"Formula: {_explain_formula(line)}")
-                else:
-                    parts.append(line)
-    return "\n\n".join(parts)
+    raw_docs = loader.load()  # List[Document]
+    out_docs: List[Document] = []
+
+    for doc in raw_docs:
+        annotated_lines = []
+        for line in doc.page_content.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if FORMULA_PATTERN.search(line):
+                annotated_lines.append(f"Formula: {_explain_formula(line)}")
+            else:
+                annotated_lines.append(line)
+        new_content = "\n".join(annotated_lines)
+        out_docs.append(Document(page_content=new_content, metadata=doc.metadata))
+
+    return out_docs
