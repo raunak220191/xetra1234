@@ -1,0 +1,539 @@
+Below is a **complete, expanded, production-grade Markdown document** for the **Structured Notes Prompt Evolution Engine (SNPEE)**. This is significantly more detailed and suitable for internal architecture docs, stakeholder sharing, or conversion to a whitepaper.
+
+---
+
+# 📘 Structured Notes Prompt Evolution Engine (SNPEE)
+
+## 1. Objective
+
+Design a **self-improving extraction system** for structured financial documents (e.g., structured notes, pricing supplements, term sheets) that:
+
+* Requires **no manual scoping logic**
+* Uses only:
+
+  * source document
+  * expected field outputs (ground truth)
+* Handles both:
+
+  * **direct fields** (explicit in text)
+  * **derived fields** (computed/inferred)
+* Continuously **learns optimal extraction strategies per field**
+
+---
+
+## 2. Core Philosophy
+
+Traditional systems fail because they:
+
+* rely on static prompts
+* depend on ops-defined scoping logic
+* treat extraction as a single-step problem
+
+### SNPEE Principle:
+
+> Extraction is not a prompt problem.
+> It is a **program evolution problem per field**.
+
+---
+
+## 3. Key Concept: Field Extraction Program (FEP)
+
+Each field is extracted using a **Field Extraction Program (FEP)** — not just a prompt.
+
+### FEP Structure
+
+```json
+{
+  "field_name": "coupon_barrier",
+  "field_type": "direct_or_derived",
+
+  "scope_strategy": {
+    "headings": ["Coupon", "Barrier"],
+    "semantic_patterns": ["coupon barrier", "% of initial reference"],
+    "table_bias": true,
+    "windowing_rule": "section_plus_adjacent"
+  },
+
+  "prompt_template": "...",
+
+  "derivation_strategy": {
+    "enabled": true,
+    "formula_family": "percentage_of_initial_reference_price"
+  },
+
+  "validator": {
+    "format_rule": "percent",
+    "cross_field_rules": [],
+    "evidence_required": true
+  },
+
+  "score_history": {
+    "accuracy": 0.0,
+    "stability": 0.0
+  }
+}
+```
+
+---
+
+## 4. High-Level Architecture
+
+```
+PDF Document
+    ↓
+Document Parser (layout-aware)
+    ↓
+Structured Intermediate Representation (IR)
+    ↓
+Field Registry
+    ↓
+Scope Generator
+    ↓
+Prompt/Program Generator
+    ↓
+Extractor Runner
+    ↓
+Derived Field Engine
+    ↓
+Validator / Critic
+    ↓
+Scoring Engine
+    ↓
+Evolution Engine
+    ↓
+Champion FEP per Field
+```
+
+---
+
+## 5. Core Modules
+
+---
+
+### 5.1 Document Parser
+
+Transforms PDF into a **rich structured IR**
+
+#### Output includes:
+
+* pages
+* sections
+* paragraphs
+* tables (rows/columns)
+* bounding boxes
+* reading order
+* span IDs
+
+#### Example
+
+```json
+{
+  "span_id": "p12_s07",
+  "section": "Coupon Provisions",
+  "text": "Coupon Barrier is 70% of Initial Reference Price"
+}
+```
+
+---
+
+### 5.2 Field Registry
+
+Central configuration for all fields.
+
+#### Contains:
+
+* field name
+* type (direct / derived / hybrid)
+* aliases
+* dependencies
+* expected format
+
+#### Example
+
+```json
+{
+  "field_name": "observation_frequency",
+  "mode": "derived",
+  "depends_on": ["observation_dates"]
+}
+```
+
+---
+
+### 5.3 Candidate Scope Generator
+
+Replaces manual scoping logic.
+
+#### Strategies:
+
+* heading-based retrieval
+* semantic search
+* definition chaining
+* table proximity
+* cross-reference expansion
+
+#### Output:
+
+Top-K candidate scopes per field
+
+---
+
+### 5.4 Prompt / Program Generator
+
+Generates multiple candidate strategies.
+
+#### Variations:
+
+* direct vs inferential extraction
+* single-step vs multi-step
+* evidence-first vs answer-first
+* table-prioritized vs text-prioritized
+
+---
+
+### 5.5 Extractor Runner
+
+Executes candidate programs.
+
+#### Captures:
+
+* extracted value
+* normalized value
+* evidence spans
+* direct vs derived classification
+* latency & cost
+
+---
+
+### 5.6 Derived Field Engine
+
+Handles non-explicit fields.
+
+#### Modes:
+
+* deterministic formulas
+* rule-based normalization
+* dependency-based inference
+* LLM-assisted classification
+
+#### Examples:
+
+* frequency from date schedule
+* barrier % normalization
+* memory coupon detection
+
+---
+
+### 5.7 Validator / Critic
+
+Ensures correctness.
+
+#### Checks:
+
+* format validity
+* evidence grounding
+* cross-field consistency
+* hallucination detection
+* logical contradictions
+
+---
+
+### 5.8 Scoring Engine
+
+Evaluates each candidate FEP.
+
+#### Standard Score:
+
+```
+FEP_SCORE =
+  0.40 * exact_match +
+  0.20 * normalized_match +
+  0.15 * evidence_score +
+  0.10 * consistency +
+  0.10 * stability -
+  0.05 * hallucination_penalty
+```
+
+#### Derived Score:
+
+```
+DERIVED_SCORE =
+  0.30 * final_value_match +
+  0.25 * derivation_correctness +
+  0.20 * dependency_accuracy +
+  0.15 * evidence_score +
+  0.10 * consistency
+```
+
+---
+
+### 5.9 Evolution Engine
+
+Optimizes FEPs over time.
+
+#### Mutation:
+
+* rewrite prompts
+* change scope
+* add derivation logic
+* adjust output structure
+
+#### Crossover:
+
+* combine best components across candidates
+
+#### Selection:
+
+* accuracy
+* consistency
+* generalization
+
+---
+
+## 6. Training Loop
+
+```
+For each field:
+  For each document:
+    Generate scopes
+    Generate candidate FEPs
+    Run extraction
+    Run derivation
+    Validate
+    Score
+
+  Select best candidates
+  Mutate + crossover
+  Repeat
+```
+
+---
+
+## 7. Field Categorization
+
+---
+
+### Type 1: Direct Fields
+
+* trade date
+* maturity date
+
+→ Literal extraction
+
+---
+
+### Type 2: Clause Logic Fields
+
+* memory coupon
+* knock-in events
+
+→ semantic + classification
+
+---
+
+### Type 3: Derived Fields
+
+* observation frequency
+* coupon periodicity
+
+→ deterministic inference
+
+---
+
+### Type 4: Payoff Classification
+
+* phoenix autocall
+* reverse convertible
+
+→ classification + pattern detection
+
+---
+
+## 8. Data Model
+
+---
+
+### Documents Table
+
+* doc_id
+* issuer
+* product_type
+* parsed_ir
+
+---
+
+### Expected Values Table
+
+* doc_id
+* field_name
+* expected_value
+
+---
+
+### Candidate Runs Table
+
+* run_id
+* field_name
+* output
+* score
+* evidence
+* flags
+
+---
+
+### Champion Programs Table
+
+* field_name
+* best_candidate
+* score_summary
+
+---
+
+## 9. Template Clustering Strategy
+
+Cluster documents into:
+
+* Phoenix Autocall
+* Reverse Convertible
+* Snowball
+* Barrier Notes
+* Basket Notes
+
+### Hierarchy:
+
+```
+Global FEP
+  → Product Cluster FEP
+      → Issuer-specific FEP
+```
+
+---
+
+## 10. Agent-Based Design
+
+---
+
+### Agent 1: Document Structurer
+
+### Agent 2: Product Classifier
+
+### Agent 3: Scope Discovery
+
+### Agent 4: Program Generator
+
+### Agent 5: Extraction Runner
+
+### Agent 6: Derivation Engine
+
+### Agent 7: Validator
+
+### Agent 8: Evolution Orchestrator
+
+---
+
+## 11. Output Contract
+
+### Direct Field
+
+```json
+{
+  "value": "Yes",
+  "confidence": 0.87,
+  "mode": "direct",
+  "evidence_span_ids": ["p11_s04"]
+}
+```
+
+### Derived Field
+
+```json
+{
+  "value": "Monthly",
+  "mode": "derived",
+  "formula_family": "date_periodicity",
+  "dependencies_used": ["observation_dates"]
+}
+```
+
+---
+
+## 12. Failure Taxonomy
+
+Track root causes:
+
+* scope miss
+* wrong section
+* table parse error
+* derivation failure
+* normalization error
+* hallucination
+* template drift
+
+---
+
+## 13. Minimal v1 Scope
+
+* 20–30 fields
+* 3 product types
+* 100–200 documents
+* 4 prompt strategies
+* 3 scope strategies
+* 1 validator
+
+---
+
+## 14. Folder Structure
+
+```
+snpee/
+  parsers/
+  ir/
+  registry/
+  scope/
+  program_generator/
+  extraction/
+  derivation/
+  validation/
+  scoring/
+  evolution/
+  storage/
+  api/
+```
+
+---
+
+## 15. Success Criteria
+
+* Field-wise accuracy improvement
+* Stable performance across templates
+* Reduced manual ops dependency
+* Clear failure diagnostics
+* Robust derived field handling
+
+---
+
+## 16. Key Differentiator
+
+> SNPEE does not optimize prompts.
+> It evolves **field-level extraction programs**.
+
+---
+
+## 17. Next Steps (Recommended)
+
+1. Build **Field Registry**
+2. Implement **Scope Generator**
+3. Create **Candidate FEP Generator**
+4. Add **Scoring + Leaderboard**
+5. Introduce **Derivation Engine**
+6. Add **Evolution Loop**
+
+---
+
+If you want next level:
+
+I can convert this into:
+
+* 📊 **Bank-grade PPT (architecture + flow diagrams)**
+* 🧠 **Research paper draft (publishable)**
+* 🧩 **Actual Python implementation (starter repo aligned to your stack)**
